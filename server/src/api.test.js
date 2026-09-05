@@ -55,8 +55,23 @@ test('complete volunteer, sponsor, admin and support workflow', async () => {
   assert.ok(recommendations.body.data.some(item => item.id === studentId));
   const support = await request('/support', { method: 'POST', body: JSON.stringify({ studentId, amount: 12000 }) }, sponsorCookie);
   const supportId = support.body.data.id;
+  const review = await request('/admin/support', {}, adminCookie);
+  assert.equal(review.body.data.find(item => item.id === supportId).student.id, studentId);
+  assert.equal(review.body.data.find(item => item.id === supportId).sponsor.name, 'Northstar Foundation');
+  await assert.rejects(() => request('/admin/support', {}, sponsorCookie), /403/);
+  await request(`/admin/support/${supportId}`, { method: 'PATCH', body: JSON.stringify({ status: 'APPROVED' }) }, adminCookie);
+  assert.equal((await request('/support', {}, sponsorCookie)).body.data.find(item => item.id === supportId).status, 'APPROVED');
+  await assert.rejects(() => request(`/admin/support/${supportId}`, { method: 'PATCH', body: JSON.stringify({ status: 'REJECTED' }) }, adminCookie), /409/);
   await assert.rejects(() => request('/support', { method: 'POST', body: JSON.stringify({ studentId, amount: 12000 }) }, sponsorCookie), /409/);
-  for (const status of ['APPROVED', 'SPONSORED', 'IN_PROGRESS', 'COMPLETED']) await request(`/support/${supportId}`, { method: 'PATCH', body: JSON.stringify({ status }) }, adminCookie);
+  for (const status of ['SPONSORED', 'IN_PROGRESS', 'COMPLETED']) await request(`/support/${supportId}`, { method: 'PATCH', body: JSON.stringify({ status }) }, adminCookie);
+
+  const secondStudent = await request('/students', { method: 'POST', body: JSON.stringify({ name: 'Rejected Workflow Student', age: 16, school: 'Workflow Academy', academicPerformance: 74, familyIncome: 4200, familySize: 5, location: 'Nairobi', financialCondition: 'Severe', educationalNeed: 'high', dropoutRisk: 'high', supportCategory: 'Tuition Fee', requiredAmount: 8000, description: 'Rejected workflow test student.' }) }, volunteerCookie);
+  const secondStudentId = secondStudent.body.data.id;
+  await request(`/admin/students/${secondStudentId}`, { method: 'PATCH', body: JSON.stringify({ status: 'APPROVED' }) }, adminCookie);
+  const rejectedSupport = await request('/support', { method: 'POST', body: JSON.stringify({ studentId: secondStudentId, amount: 8000 }) }, sponsorCookie);
+  await request(`/admin/support/${rejectedSupport.body.data.id}`, { method: 'PATCH', body: JSON.stringify({ status: 'REJECTED' }) }, adminCookie);
+  assert.equal((await request('/support', {}, sponsorCookie)).body.data.find(item => item.id === rejectedSupport.body.data.id).status, 'REJECTED');
+  await assert.rejects(() => request(`/admin/support/${rejectedSupport.body.data.id}`, { method: 'PATCH', body: JSON.stringify({ status: 'APPROVED' }) }, adminCookie), /409/);
 
   const sponsorSupport = await request('/support', {}, sponsorCookie);
   const volunteerSupport = await request('/support', {}, volunteerCookie);

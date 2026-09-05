@@ -719,8 +719,11 @@ function AdminStudentReview() {
   const [processing, setProcessing] = useState("");
   const load = () =>
     api
-      .get("/students")
-      .then((response) => setItems(response.data.data))
+      .get("/admin/students")
+      .then((response) => {
+        setItems(response.data.data);
+        setError("");
+      })
       .catch((err) =>
         setError(err.response?.data?.message || "Unable to load students."),
       );
@@ -978,6 +981,108 @@ function Sponsorships() {
           <Empty
             title="Your first impact is waiting"
             text="Support a student to see their progress here."
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+function AdminSponsorshipReview() {
+  const [items, setItems] = useState([]);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [processing, setProcessing] = useState("");
+  const load = () =>
+    api
+      .get("/admin/support")
+      .then((response) => {
+        setItems(response.data.data);
+        setError("");
+      })
+      .catch((err) =>
+        setError(err.response?.data?.message || "Unable to load support requests."),
+      );
+  useEffect(() => {
+    load();
+  }, []);
+  const update = async (item, status) => {
+    const action = status === "APPROVED" ? "approve" : "reject";
+    if (!window.confirm(`Are you sure you want to ${action} this sponsorship?`)) return;
+    setProcessing(`${item.id}:${status}`);
+    setError("");
+    setMessage("");
+    try {
+      await api.patch(`/admin/support/${item.id}`, { status });
+      setMessage(`Sponsorship ${status.toLowerCase()}.`);
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to update sponsorship.");
+    } finally {
+      setProcessing("");
+    }
+  };
+  return (
+    <div className="page">
+      <div className="page-head">
+        <div>
+          <p className="eyebrow">Sponsorship review</p>
+          <h1>Support requests</h1>
+          <p className="muted">Review sponsorships before support moves forward.</p>
+        </div>
+      </div>
+      {error && <div className="error">{error}</div>}
+      {message && <div className="success">{message}</div>}
+      <div className="panel table-panel admin-support-table">
+        <div className="table-head">
+          <strong>Student</strong>
+          <strong>Sponsor</strong>
+          <strong>Category</strong>
+          <strong>Amount</strong>
+          <strong>Status</strong>
+          <strong>Actions</strong>
+        </div>
+        {items.map((item) => {
+          const pending = item.status === "PENDING";
+          return (
+            <div className="table-row" key={item.id}>
+              <span>{item.student?.name || "Unknown student"}</span>
+              <span>{item.sponsor?.name || "Unknown sponsor"}</span>
+              <span>{item.category}</span>
+              <span>{item.amount} KES</span>
+              <span className={`status ${item.status.toLowerCase()}`}>
+                {item.status}
+              </span>
+              <span>
+                {pending ? (
+                  <div>
+                    <button
+                      type="button"
+                      className="button primary small"
+                      disabled={Boolean(processing)}
+                      onClick={() => update(item, "APPROVED")}
+                    >
+                      {processing === `${item.id}:APPROVED` ? "Approving..." : "Approve"}
+                    </button>{" "}
+                    <button
+                      type="button"
+                      className="button ghost small"
+                      disabled={Boolean(processing)}
+                      onClick={() => update(item, "REJECTED")}
+                    >
+                      {processing === `${item.id}:REJECTED` ? "Rejecting..." : "Reject"}
+                    </button>
+                  </div>
+                ) : (
+                  "Processed"
+                )}
+              </span>
+            </div>
+          );
+        })}
+        {!items.length && (
+          <Empty
+            title="No support requests yet"
+            text="New sponsorship requests will appear here for review."
           />
         )}
       </div>
@@ -1392,7 +1497,7 @@ function App() {
           path="/admin/support"
           element={
             <Protected role="ADMIN">
-              <Sponsorships />
+              <AdminSponsorshipReview />
             </Protected>
           }
         />

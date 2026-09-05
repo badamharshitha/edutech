@@ -40,7 +40,7 @@ const supportSchema = new mongoose.Schema({
   sponsorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   amount: { type: Number, min: 1, required: true },
   category: { type: String, required: true },
-  status: { type: String, enum: ['PENDING', 'APPROVED', 'SPONSORED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'], default: 'PENDING' },
+  status: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED', 'SPONSORED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'], default: 'PENDING' },
   notes: { type: String, maxlength: 2000 }
 }, { timestamps: true });
 supportSchema.index({ studentId: 1, status: 1 });
