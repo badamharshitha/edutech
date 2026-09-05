@@ -1438,6 +1438,14 @@ function App() {
           }
         />
         <Route
+          path="/sponsor/support"
+          element={
+            <Protected role="SPONSOR">
+              <Sponsorships />
+            </Protected>
+          }
+        />
+        <Route
           path="/sponsor/profile"
           element={
             <Protected role="SPONSOR">

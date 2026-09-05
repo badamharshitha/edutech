@@ -51,6 +51,16 @@ Run `npm run dev` from the repository root. Open forwarded port `5173` for the c
 
 Without `MONGODB_URI`, production mode exits with an error. Use `DEMO_MODE=true` only for an intentional local demo.
 
+## Render deployment
+
+The repository includes `render.yaml` for a Render Web Service and Static Site. In Render, create a Blueprint from this repository and use the generated services, or create equivalent services with these settings:
+
+- Backend Web Service: root directory `server`, build command `npm install`, start command `npm start`.
+- Frontend Static Site: root directory `client`, build command `npm install && npm run build`, publish directory `dist`.
+- Frontend rewrite: source `/*`, destination `/index.html`, action `Rewrite`.
+
+The frontend must be built with `VITE_API_URL` set to the backend URL ending in `/api`. Set the backend `CLIENT_URL` to the frontend URL after the Static Site is created. Render injects `PORT` into the backend; the application binds to `0.0.0.0`.
+
 ## Tests
 
 Run `npm test` for the backend scoring tests and `npm --prefix client run build` for the frontend production build.
