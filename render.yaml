@@ -15,7 +15,7 @@ services:
       - key: COOKIE_SECURE
         value: "true"
       - key: CLIENT_URL
-        sync: false
+        value: https://edubridge-as3r.onrender.com
       - key: OPENAI_API_KEY
         sync: false
 
@@ -27,7 +27,7 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
-        sync: false
+        value: https://edubridge-api-z1k5.onrender.com/api
     routes:
       - type: rewrite
         source: /*
