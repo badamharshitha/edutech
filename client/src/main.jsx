@@ -49,8 +49,13 @@ const forwardedApiUrl = window.location.hostname.match(
 )
   ? `${window.location.protocol}//${window.location.hostname.replace(/-(5173|5174)\.app\.github\.dev$/, "-5000.app.github.dev")}/api`
   : "http://localhost:5000/api";
+const apiBaseUrl =
+  import.meta.env.VITE_API_URL || (import.meta.env.DEV ? forwardedApiUrl : "");
+if (!apiBaseUrl) {
+  throw new Error("VITE_API_URL is required for production builds.");
+}
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || forwardedApiUrl,
+  baseURL: apiBaseUrl,
   withCredentials: true,
 });
 const AuthContext = createContext(null);

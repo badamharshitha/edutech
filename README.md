@@ -61,6 +61,14 @@ The repository includes `render.yaml` for a Render Web Service and Static Site. 
 
 The frontend must be built with `VITE_API_URL` set to the backend URL ending in `/api`. Set the backend `CLIENT_URL` to the frontend URL after the Static Site is created. Render injects `PORT` into the backend; the application binds to `0.0.0.0`.
 
+## Vercel deployment
+
+Vercel should use two projects from this repository. Create the frontend project with `client` as its root directory and the backend project with `server` as its root directory. The frontend uses Vite's standard build output and `client/vercel.json` rewrites browser routes to `index.html`. The backend uses `server/api/[...path].js` as a catch-all serverless function, so `/api/...` routes do not require a permanently running process.
+
+Set these variables in the Vercel backend project: `MONGODB_URI`, `JWT_SECRET`, `CLIENT_URL`, `DEMO_MODE`, `COOKIE_SECURE`, and `OPENAI_API_KEY`. Set `CLIENT_URL` to the exact frontend origin; comma-separated origins can be used for explicitly allowed preview URLs. Set `DEMO_MODE=false` and `COOKIE_SECURE=true` in production.
+
+Set `VITE_API_URL` in the Vercel frontend project to the backend origin ending in `/api`. The frontend sends credentials with Axios, and the backend keeps the authentication cookie HttpOnly, Secure in production, and compatible with separate frontend and backend origins.
+
 ## Tests
 
 Run `npm test` for the backend scoring tests and `npm --prefix client run build` for the frontend production build.

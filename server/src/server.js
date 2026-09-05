@@ -16,6 +16,7 @@ import { User, Student, SupportRequest, AuditLog } from './models.js';
 const app = express();
 const port = Number(process.env.PORT || 5000);
 const demoMode = process.env.DEMO_MODE === 'true';
+const isVercel = process.env.VERCEL === '1';
 const secret = process.env.JWT_SECRET || (demoMode ? 'edubridge-development-secret' : '');
 const categories = ['Tuition Fee', 'Exam Fee', 'Study Materials', 'Transportation', 'Higher Education', 'Other Educational Support'];
 const activeStatuses = ['PENDING', 'APPROVED', 'SPONSORED', 'IN_PROGRESS'];
@@ -55,7 +56,8 @@ async function analyzeStudent(data) {
   } catch { return fallback; }
 }
 const tokenFor = user => jwt.sign({ id: String(user._id || user.id), role: user.role }, secret, { expiresIn: '7d' });
-const setSession = (res, user) => res.cookie('edubridge_session', tokenFor(user), { httpOnly: true, sameSite: 'lax', secure: process.env.COOKIE_SECURE === 'true', maxAge: 7 * 86400000 });
+const cookieSecure = process.env.COOKIE_SECURE === 'true';
+const setSession = (res, user) => res.cookie('edubridge_session', tokenFor(user), { httpOnly: true, sameSite: cookieSecure ? 'none' : 'lax', secure: cookieSecure, maxAge: 7 * 86400000 });
 const getUser = id => demoMode ? memory.users.find(item => item.id === id) : User.findById(id);
 const getStudents = () => demoMode ? Promise.resolve(memory.students) : Student.find().lean();
 const getSupports = () => demoMode ? Promise.resolve(memory.supports) : SupportRequest.find().lean();
@@ -72,9 +74,9 @@ const audit = async (user, action, entityType, entityId, description) => { const
 app.set('trust proxy', 1);
 app.use(helmet());
 const allowedOrigin = (origin, callback) => {
-  const configured = process.env.CLIENT_URL || 'http://localhost:5173';
+  const configured = String(process.env.CLIENT_URL || 'http://localhost:5173').split(',').map(value => value.trim().replace(/\/$/, '')).filter(Boolean);
   const codespacesOrigin = /^https:\/\/[^/]+-(5173|5174)\.app\.github\.dev$/;
-  if (!origin || origin === configured || origin === 'http://localhost:5173' || origin === 'http://localhost:5174' || codespacesOrigin.test(origin)) return callback(null, true);
+  if (!origin || configured.includes(origin.replace(/\/$/, '')) || origin === 'http://localhost:5173' || origin === 'http://localhost:5174' || codespacesOrigin.test(origin)) return callback(null, true);
   return callback(new Error('Origin is not allowed by CORS.'));
 };
 const corsOptions = { origin: allowedOrigin, credentials: true, methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] };
@@ -123,6 +125,6 @@ app.use((_, res) => error(res, 404, 'Route not found.'));
 app.use((e, _, res, __) => { console.error(e); error(res, e.name === 'ValidationError' ? 422 : 500, e.name === 'ValidationError' ? 'Request validation failed.' : 'Something went wrong on the server.'); });
 
 async function start() { if (!demoMode && (!process.env.MONGODB_URI || !process.env.JWT_SECRET)) throw new Error('MONGODB_URI and JWT_SECRET are required. Set DEMO_MODE=true for an explicit local demo.'); await seedDemo(); if (!demoMode) { await mongoose.connect(process.env.MONGODB_URI); console.log('MongoDB connected.'); } app.listen(port, '0.0.0.0', () => console.log(`EduBridge API listening on 0.0.0.0:${port} (${demoMode ? 'demo mode' : 'MongoDB mode'})`)); }
-if (process.env.NODE_ENV !== 'test') start().catch(e => { console.error(e); process.exit(1); });
+if (process.env.NODE_ENV !== 'test' && !isVercel) start().catch(e => { console.error(e); process.exit(1); });
 export { scoreStudent };
 export default app;
